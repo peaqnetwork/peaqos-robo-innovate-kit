@@ -1,0 +1,16 @@
+.env
+motion-log/
+peaqos.log
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+arm-ed25519.key
+did.json
+.env.tmp
+dev-log/
+demo-log/
+.venv-ros/

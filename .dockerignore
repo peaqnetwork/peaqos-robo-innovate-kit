@@ -1,0 +1,16 @@
+# never bake a team's key, wallet or logs into an image someone may copy to a USB stick
+.env
+.env.*
+!.env.example
+*.key
+did.json
+.venv/
+motion-log/
+demo-log/
+dev-log/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.git/
+.DS_Store
+.venv-ros/

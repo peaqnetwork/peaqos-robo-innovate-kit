@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "peaqos-arm-kit"
+version = "0.1.0"
+description = "Robo.innovate 2026 starter kit: record a Doosan A0509's joint motion as peaqOS events and verify it."
+requires-python = ">=3.10"
+dependencies = [
+    "peaq-os-sdk==0.11.2",
+    "peaq-os-cli==0.0.19",
+    "python-dotenv>=1.0",
+    "click>=8.4",
+    "web3>=6",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+# rclpy comes from the ROS 2 install, not pip. See docs/ARM.md.
+
+[project.scripts]
+armkit = "peaqos_arm_kit.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["peaqos_arm_kit*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

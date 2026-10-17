@@ -10,8 +10,7 @@ docker build -t peaqos-arm-kit -f docker/Dockerfile .
 
 # shell 1: the driver + emulator (RViz will complain about X; ignore it)
 docker run --rm -it --network host \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v "$PWD":/kit -w /kit peaqos-arm-kit \
+  -v /var/run/docker.sock:/var/run/docker.sock peaqos-arm-kit \
   ros2 launch dsr_bringup2 dsr_bringup2_rviz.launch.py mode:=virtual model:=a0509
 
 # shell 2: the kit, same image. It does not need the Docker socket: only the

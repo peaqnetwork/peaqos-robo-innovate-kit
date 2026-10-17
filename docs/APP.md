@@ -4,7 +4,7 @@
 
 The segmenter watches joint speed. A segment opens when any joint moves faster than `KIT_VELOCITY_THRESHOLD` (default 0.02 rad/s) and closes once every joint has been below it for `KIT_SETTLE_SECONDS` (0.4 s). Moves shorter than `KIT_MIN_SEGMENT_SECONDS` (0.3 s) are dropped as jitter. A move longer than `KIT_MAX_SEGMENT_SECONDS` (20 s) is split into several segments.
 
-If the robot publishes joint velocities they are used; otherwise the kit differentiates positions.
+If the robot publishes non-zero joint velocities they are used; otherwise (the Doosan emulator sends all zeros) the kit computes speed from positions.
 
 ## What goes where
 
@@ -28,7 +28,7 @@ It needs the log folder, the machine ID and an RPC URL, and no private key. It c
 
 1. The file still hashes to the value in the ledger (catches an edited log).
 2. The file is well-formed for this machine: right schema and machine ID, consistent samples, time increasing (catches nonsense that happens to hash).
-3. An event with exactly that hash exists under your machine ID (catches a segment that was never put on record; `failed`, `pending` and `dry-run` segments fail here).
+3. An event with exactly that hash exists under your machine ID (catches a segment that was never put on record). Segments recorded without `--live` fail the run.
 4. The on-chain summary matches the file (catches a hash reused with a different description).
 
 Finally it lists every motion event on peaq under your machine ID that has no segment in the log, and fails the run on it. So every move you put on record must be in the log you hand in. Events with other metadata are listed as information only.
@@ -42,5 +42,5 @@ A passing verify proves the log you hand in is exactly the log your robot's iden
 ## Things to know this week
 
 - **Each event is one transaction**, about 0.04 PEAQ from your wallet. A move every few seconds is fine; submitting every sample of a 100 Hz topic is not.
-- **The SDK limits how fast one machine can submit.** The kit backs off and retries; anything that still fails is marked `failed` in the ledger and `armkit resubmit` sends it later.
+- **The RPC endpoint limits requests.** The kit backs off and retries; anything that still fails is marked `failed` (or `pending` if the receipt was lost) and `armkit resubmit` sends it later.
 - **Your MCR rating stays `Provisioned`.** A rating needs history over a longer time. It isn't part of the scoring.

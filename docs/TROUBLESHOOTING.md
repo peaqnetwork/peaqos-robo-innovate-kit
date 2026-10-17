@@ -10,7 +10,7 @@
 | `activate` exits 2 with `INSUFFICIENT_PEAQ` | the wallet isn't funded yet | ask a mentor for 1.5 PEAQ, then run `scripts/setup.sh` again: it keeps your key and continues |
 | `activate` asks for a 2FA code | it was run without `--skip-funding` on an unfunded wallet | Ctrl-C, get funded, run `scripts/setup.sh` again |
 | `KIT_MACHINE_ID is not set` | setup didn't finish, or you're not in the folder with `.env` | run `armkit` from the kit folder; if needed run `scripts/setup.sh` again |
-| Windows | `setup.sh` is bash | use WSL2 Ubuntu 22.04 and clone the kit inside WSL (`~/`), not under `/mnt/c` |
+| Windows | `setup.sh` is bash | use WSL2 Ubuntu 22.04, clone the kit inside WSL (`~/`, not `/mnt/c`), then follow the [Docker setup](../docker/README.md) |
 
 ## Network and ROS 2
 
@@ -28,7 +28,7 @@
 |---|---|---|
 | `receipt lost … run armkit resubmit` | the transaction was sent but the RPC timed out before it confirmed | `armkit resubmit`: it checks peaq first and only sends what is really missing; if a transaction is still in flight it stops, so run it again a minute later |
 | `NotOwnerOrController` or `NotAuthorizedSubmitter` | the wallet in `.env` isn't the one that created your peaqID | use the `.env` from `setup.sh`; `.venv/bin/peaqos whoami` shows the active wallet |
-| `RateLimitExceeded` | too many events in a short time | segments are too short: raise `KIT_MIN_SEGMENT_SECONDS` or `KIT_SETTLE_SECONDS` |
+| an RPC error mentioning `rate` or `429` | the endpoint is rate-limited | the kit retries by itself; if moves still fail, run `armkit resubmit` later and tell a mentor |
 | `armkit check` warns the balance is below 0.2 PEAQ | each event costs about 0.04 PEAQ | ask a mentor for a top-up before recording `--live` |
 
 ## Verify

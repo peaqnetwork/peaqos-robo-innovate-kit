@@ -9,7 +9,7 @@ You only need this page if you want to go below the kit. Three things from peaqO
 export PEAQOS_PRIVATE_KEY=$(python3 -c 'from eth_account import Account; print("0x" + Account.create().key.hex().removeprefix("0x"))')
 
 # 2. .env for peaq mainnet, with the hackathon RPC URL
-PEAQOS_NETWORK=mainnet PEAQOS_RPC_URL=<url from the mentor> peaqos init --non-interactive
+PEAQOS_NETWORK=mainnet PEAQOS_RPC_URL=<url from the mentor> peaqos init --non-interactive --force
 chmod 600 .env
 
 # 3. the robot's own Ed25519 key and DID document, controlled by your wallet
@@ -35,14 +35,13 @@ The credential subject includes your wallet address, so nobody else can claim yo
 The kit wraps it, but this is all it is:
 
 ```python
-import time
 from dotenv import load_dotenv; load_dotenv()      # from_env() does not load .env itself
 from peaq_os_sdk import PeaqosClient
 client = PeaqosClient.from_env()
 tx_hash, data_hash = client.submit_event(
     machine_id=MACHINE_ID, event_type=1,           # 1 = activity
     value=duration_ms,
-    timestamp=min(int(time.time()), client.web3.eth.get_block("latest")["timestamp"]) - 5,  # never ahead of the chain
+    timestamp=segment_end_unix,                    # the kit caps this at the latest block time minus 5 s
     raw_data=canonical_bytes, trust_level=0,
     source_chain_id=3338, source_tx_hash=None,
     metadata=summary_bytes,                        # up to 4096 bytes

@@ -77,7 +77,7 @@ On shared Wi-Fi, run `export ROS_LOCALHOST_ONLY=1` in every terminal so you don'
 
 ## 4. Record
 
-Test without putting anything on record (free, unlimited):
+Test run, nothing sent to peaq (free, unlimited):
 
 ```bash
 KIT_JOINT_SOURCE=ros2 KIT_LOG_DIR=./dev-log armkit record
@@ -91,7 +91,7 @@ KIT_JOINT_SOURCE=ros2 armkit record --live
 
 Each move becomes one event under your peaqID, and its full data goes into `motion-log/`. Ctrl-C closes the move in progress and waits for the last events to land. If a move shows `receipt lost`, run `armkit resubmit`: it checks peaq first, skips moves that already landed, and stops if a transaction is still in flight (run it again a minute later), so no move is recorded twice.
 
-Three rules, because every event under your peaqID has to be in the log you hand in:
+Three rules, because every move you put on record under your peaqID has to be in the log you hand in:
 
 - Test runs go in their own folder (`KIT_LOG_DIR=./dev-log`). Only the run you want judged uses `--live`.
 - Never delete `motion-log/`.
@@ -134,7 +134,7 @@ The kit is the starting point. Ideas that fit the week:
 | Command | What it does |
 |---|---|
 | `armkit check` | Shows your configuration, wallet balance and whether peaq is reachable |
-| `armkit record` | Records moves without putting them on record; add `--live` to put them on record |
+| `armkit record` | Writes moves to the local log only; add `--live` to put each one on peaq |
 | `armkit resubmit` | Retries moves that failed or lost their receipt, without recording any move twice |
 | `armkit verify` | Checks your motion log against peaq |
 | `armkit status` | Shows your latest events on peaq (`--arm` for the real A0509) |

@@ -28,6 +28,4 @@ Stop shell 1 with Ctrl-C: that also removes the emulator container. After `docke
 
 `-v "$PWD":/kit` mounts your kit folder, so `.env` and `motion-log/` live on your laptop, not in the container.
 
-**Pull the images before the event.** Venue Wi-Fi will not pull multi-GB images for every team. Mentors bring the images on USB: `docker load -i peaqos-arm-kit-arm64.tar` on Apple Silicon or `docker load -i peaqos-arm-kit-amd64.tar` on x86 (`uname -m` tells you which), then `docker load -i dsr_emulator-3.0.1.tar`. Both kit files load as `peaqos-arm-kit:latest`, so skip the build step.
-
-Tested on an Apple Silicon Mac: the ROS driver reaches STANDBY, `/dsr01/joint_states` runs at about 100 Hz, and 3 moves give 3 segments. If `colcon build` fails, ask a mentor.
+**At the event, load the images from the mentors' USB stick** instead of building or pulling them over the Wi-Fi: `docker load -i peaqos-arm-kit-arm64.tar` on Apple Silicon or `docker load -i peaqos-arm-kit-amd64.tar` on x86 (`uname -m` tells you which), then `docker load -i dsr_emulator-3.0.1.tar`. Both kit files load as `peaqos-arm-kit:latest`, so skip the build step.

@@ -1,54 +1,46 @@
-# The app: what one event is, and how a judge reads it
+# What one event is, and what verify proves
 
-## One event = one motion segment
+## One event = one move
 
-The segmenter watches joint speed. When any joint exceeds `KIT_VELOCITY_THRESHOLD` (default 0.02 rad/s) a segment opens; it closes once every joint has been below the threshold for `KIT_SETTLE_SECONDS` (0.4 s). Segments whose active motion is shorter than `KIT_MIN_SEGMENT_SECONDS` are dropped as jitter. A segment longer than `KIT_MAX_SEGMENT_SECONDS` is split, so one long move becomes several events rather than one oversized payload.
+The segmenter watches joint speed. A segment opens when any joint moves faster than `KIT_VELOCITY_THRESHOLD` (default 0.02 rad/s) and closes once every joint has been below it for `KIT_SETTLE_SECONDS` (0.4 s). Moves shorter than `KIT_MIN_SEGMENT_SECONDS` (0.3 s) are dropped as jitter. A move longer than `KIT_MAX_SEGMENT_SECONDS` (20 s) is split into several segments.
 
-If the controller publishes joint velocities they are used directly; otherwise positions are differentiated.
+If the robot publishes joint velocities they are used; otherwise the kit differentiates positions.
 
 ## What goes where
 
-| Where | What | Why |
-|---|---|---|
-| `motion-log/segments/NNNNNN.json` | the full segment: schema id, machine id, **declared source** (`ros2:/dsr01/joint_states`, `csv:<file>`, `synthetic`), segment index, start/end time (source clock), joint names, every sample as `[t_rel_s, q1..qN]`, start and end pose | this is `raw_data`. It never leaves the robot PC unless the team hands it over. |
-| on chain `dataHash` | keccak256 of that file, byte for byte | the anchor. Change one digit in the file and it no longer matches. |
-| on chain `metadata` | `{"s":"joint_motion/0.1","i":<segment>,"ms":<duration>,"n":<samples>,"j":<joints>,"d":[joint deltas]}` | so the chain alone says what each event was, and the verifier can cross-check the file against it |
-| on chain `value` | duration in milliseconds | activity events need an integer; duration is the honest one |
-| on chain `timestamp` | time the segment closed, capped at the latest block time, minus 5 s | the registry rejects timestamps ahead of the block, and laptop clocks drift |
-| on chain `trustLevel` | 0 (self-reported) by default | 1 and 2 mean "on-chain verifiable" and "hardware-signed". Only claim them if you can show why. |
-| `motion-log/ledger.jsonl` | append-only: a line when a segment is recorded, another when its status changes (hash, metadata, raw file, status, tx hash); the last line per segment wins | the index a judge starts from |
+| Where | What |
+|---|---|
+| `motion-log/segments/NNNNNN.json` | The full segment: schema, machine ID, declared source (`ros2:/dsr01/joint_states`, `csv:<file>` or `synthetic`), segment index, start and end time, joint names, every sample as `[t_rel_s, q1..qN]`, start and end pose. Stays on your laptop until you hand it in. |
+| `motion-log/ledger.jsonl` | The index: a line when a segment is recorded and another when its status changes (the last line per segment counts). |
+| on peaq: `dataHash` | keccak256 of the segment file, byte for byte. Change one digit and it no longer matches. |
+| on peaq: `metadata` | A short summary: `{"s":"joint_motion/0.1","i":<segment>,"ms":<duration>,"n":<samples>,"j":<joints>,"d":[joint deltas]}` |
+| on peaq: `value` | Duration in milliseconds |
+| on peaq: `timestamp` | When the segment closed, never ahead of the latest block (minus 5 s, since laptop clocks drift) |
+| on peaq: `trustLevel` | 0 (self-reported). 1 means onchain verifiable, 2 means hardware-signed: only claim them if you can show why. |
 
-Canonical form: UTF-8 JSON, keys sorted, no whitespace, positions rounded to 1e-5 rad, times to 1 ms. Same segment in, same bytes out, on any machine, which is what makes the hash reproducible.
+Segment files are canonical JSON (keys sorted, no whitespace, positions rounded to 1e-5 rad, times to 1 ms), so the same segment always gives the same bytes and the same hash.
 
-## Declared input source
+The `source` field is inside the hashed file, so it is fixed when you record. `armkit verify` shows it; judges read your declared source from there.
 
-The `source` field is part of the hashed document, so it is fixed at recording time and shown by `armkit verify`. Synthetic and CSV are for building and testing; the run a team hands in comes from the Doosan emulator, a ROS 2 simulator or a real robot, and the source field is how the team declares which. Judges read it off the verifier output.
+## What `armkit verify` checks
 
-## What the verifier checks
+It needs the log folder, the machine ID and an RPC URL, and no private key. It checks that it is talking to peaq mainnet (chain 3338) and that the log isn't empty, then for every segment:
 
-`armkit verify` needs the log folder, the machine ID and an RPC URL. No private key.
+1. The file still hashes to the value in the ledger (catches an edited log).
+2. The file is well-formed for this machine: right schema and machine ID, consistent samples, time increasing (catches nonsense that happens to hash).
+3. An event with exactly that hash exists under your machine ID (catches a segment that was never put on record; `failed`, `pending` and `dry-run` segments fail here).
+4. The on-chain summary matches the file (catches a hash reused with a different description).
 
-It checks the connection is peaq mainnet (3338) and the log is not empty, then for every segment in the ledger:
+Finally it lists every motion event on peaq under your machine ID that has no segment in the log, and fails the run on it. So every move you put on record must be in the log you hand in. Events with other metadata are listed as information only.
 
-1. Does the raw file still hash to the value the ledger claims? Catches a log edited after the fact.
-2. Is the document well-formed for this machine: right schema, this `machine_id`, sample rows of the right width, finite values, time increasing, poses matching the first and last sample? Catches nonsense that happens to hash correctly.
-3. Is there an on-chain event for this machine with exactly that hash? Catches a segment that was never anchored. Segments the ledger marks `failed`, `pending` or `dry-run` fail here. `--include-pending` only stops each dry-run segment being reported as a run-level problem; they still fail.
-4. Does the on-chain summary agree with the file: sample count, joint count, duration, segment index, joint deltas, and `value`? Catches a hash reused under a different description.
+`armkit verify --json` gives the same report as JSON.
 
-Then it lists every `joint_motion` event on chain for the machine that has no matching segment in the log and fails the run on it, so a team cannot quietly drop a move from the log it hands in. Events with other metadata on the same machine are listed as information and not judged. This means earlier motion test events under the same identity fail a final hand-in: keep dry runs in their own folder, use a fresh identity for the final run, or hand in the complete log.
+## What it proves, and what it doesn't
 
-`armkit verify --json` gives the same report as JSON for scoring scripts.
+A passing verify proves the log you hand in is exactly the log your robot's identity put on record, at the times peaq shows. It does not prove the motion came from a robot rather than a script. Making that provable is a good thing to build: sign each segment with the robot's own key (the Ed25519 key `setup.sh` creates, listed in its DID document) and teach the verifier to check the signature. The kit only submits `trust_level` 0; if you build signing, change `_trust_level` in `peaqos_arm_kit/config.py` and explain it in your runbook.
 
-## Your run versus the arm's demo
+## Things to know this week
 
-The pendant module on the real A0509 anchors its demo movements the same way: a hash and a summary on chain under the arm's peaqID. The difference is that its raw motion data stays on the controller, so nobody outside can recompute the hash. For the arm, "verified" means "the transaction exists and came from the arm's identity". For your run, `armkit verify` goes all the way: the raw log is in your hands, the hash is recomputed, and every segment is accounted for. That gap is the point of the challenge, not a flaw in it: show what full verifiability looks like.
-
-## What this does and does not prove
-
-It proves the log the team hands in is the same log whose hashes the robot's identity anchored, at the times the chain says. It does not by itself prove the data came from the robot rather than from a script. Making that provable is a legitimate thing to build during the week: sign the canonical bytes with the robot's DID key before hashing, and show the verifier how to check the signature against the DID document. The kit itself submits self-reported events (`trust_level` 0); if you build signing, change `_trust_level` in `peaqos_arm_kit/config.py` and explain it in your runbook.
-
-## Things the chain will not do for you during the hackathon
-
-- **MCR will not move.** The Machine Credit Rating stays "Provisioned" until a machine has 5 activity events or 3 revenue days spread over at least 30 days. Your events count; the score just won't change this week.
-- **One transaction per event, ~0.035 to 0.045 PEAQ each.** Each segment costs gas from the team wallet. A busy arm producing a move every few seconds is fine; a 200 Hz loop submitting every sample is not. Segment, don't stream.
-- **The SDK has a client-side rate limit** (sliding window per machine). The submitter backs off and retries; failures are recorded in the ledger with `status: failed` and can be resubmitted later.
+- **Each event is one transaction**, about 0.04 PEAQ from your wallet. A move every few seconds is fine; submitting every sample of a 100 Hz topic is not.
+- **The SDK limits how fast one machine can submit.** The kit backs off and retries; anything that still fails is marked `failed` in the ledger and `armkit resubmit` sends it later.
+- **Your MCR rating stays `Provisioned`.** A rating needs history over a longer time. It isn't part of the scoring.

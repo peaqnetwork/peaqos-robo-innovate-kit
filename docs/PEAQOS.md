@@ -1,41 +1,34 @@
-# peaqOS for this challenge
+# The peaqOS calls behind the kit
 
-You need three things from peaqOS: a **machine identity** for the arm (a peaqID, which is also a machine ID the EventRegistry knows), a **funded wallet** that owns it, and the **`submit_event`** call. Everything else in the SDK (Stream, Scale, Verify, Solana) is out of scope this week.
+You only need this page if you want to go below the kit. Three things from peaqOS are used: a machine identity (peaqID), a funded wallet that owns it, and the `submit_event` call. The rest of peaqOS is out of scope this week.
 
-## Setup, step by step (what `scripts/setup.sh` does)
+## What `scripts/setup.sh` does
 
 ```bash
-# 1. a key for the team wallet (the kit needs PEAQOS_PRIVATE_KEY; the CLI's OWS vault is not wired in)
+# 1. a new wallet key for the team
 export PEAQOS_PRIVATE_KEY=$(python3 -c 'from eth_account import Account; print("0x" + Account.create().key.hex().removeprefix("0x"))')
 
-# 2. .env for peaq mainnet, pointing at the hackathon RPC endpoint
-PEAQOS_NETWORK=mainnet PEAQOS_RPC_URL=https://<hackathon-endpoint> peaqos init --non-interactive
+# 2. .env for peaq mainnet, with the hackathon RPC URL
+PEAQOS_NETWORK=mainnet PEAQOS_RPC_URL=<url from the mentor> peaqos init --non-interactive
 chmod 600 .env
 
-# 3. the arm's DID document: its own Ed25519 key, controlled by your signer
-peaqos whoami                                   # shows the signer address
-python scripts/make_did_document.py --controller 0x<signer> --team blue
-#    -> arm-ed25519.key (keep it on the robot PC) and did.json
+# 3. the robot's own Ed25519 key and DID document, controlled by your wallet
+python scripts/make_did_document.py --controller 0x<your wallet> --team <team>
+#    -> arm-ed25519.key (keep it private) and did.json
 
-# 4. get the wallet funded: 1.5 PEAQ. The Entry bond is ~0.5 PEAQ (priced in USD, so it moves;
-#    0.5058 on Oct 15), the CLI insists on 0.05 headroom, activation gas was ~0.09, and each
-#    event costs ~0.035-0.045. 1.5 covers activation plus ~20 events; mentors top up after that.
+# 4. wait until a mentor has sent 1.5 PEAQ: about 0.6 for activation, the rest pays for about 20 events
 
-# 5. activate the arm's identity. machine-type + credential-subject fix the ID forever.
+# 5. create the peaqID. Machine type + credential subject fix the machine ID forever.
 peaqos activate \
   --machine-type robo-innovate-2026-a0509 \
-  --credential-subject-hex 0x$(python3 -c "print('robo-innovate-2026/blue/0x<signer, lowercase>'.encode().hex())") \
-  --manufacturer 0x<signer> \
+  --credential-subject-hex 0x$(python3 -c "print('robo-innovate-2026/<team>/0x<your wallet, lowercase>'.encode().hex())") \
+  --manufacturer 0x<your wallet> \
   --did-document ./did.json \
   --tier entry --skip-funding --yes --json
-# -> copy "machine_id" into .env as KIT_MACHINE_ID
+# -> "machine_id" goes into .env as KIT_MACHINE_ID
 ```
 
-`--manufacturer` is recorded on chain and never verified; Doosan has no peaq address, so the team signer stands in. `--dry-run` shows the machine ID and the bond quote but exits 2 with `INSUFFICIENT_PEAQ` on an unfunded wallet, so you cannot fully preview before funding: that is a known CLI limitation, not a mistake on your side.
-
-Why `--skip-funding`: without it, a wallet below the bond triggers the Gas Station faucet flow, which enrols 2FA interactively and is rate-limited per IP. Ten people on one venue network should not go through that. Get funded first, then activate.
-
-Why mainnet: the agung testnet has no Tokenomics 2.0 EventRegistry, so events cannot be submitted there.
+The credential subject includes your wallet address, so nobody else can claim your team name first. `--skip-funding` avoids the faucet flow, which asks for 2FA and is rate-limited per IP.
 
 ## The event call
 
@@ -52,20 +45,14 @@ tx_hash, data_hash = client.submit_event(
     timestamp=min(int(time.time()), client.web3.eth.get_block("latest")["timestamp"]) - 5,  # never ahead of the chain
     raw_data=canonical_bytes, trust_level=0,
     source_chain_id=3338, source_tx_hash=None,
-    metadata=summary_bytes,                        # <= 4096 bytes
+    metadata=summary_bytes,                        # up to 4096 bytes
 )
 ```
 
-The SDK computes `keccak256(raw_data)` and sends only the hash. The caller must be the machine's owner wallet, or a controller it names: for the kit, the wallet that activated it.
+The SDK computes `keccak256(raw_data)` and sends only the hash. Only the machine's owner wallet, or a controller it names, can submit.
 
-## Reading back
+## Reading events back
 
-`EventRegistry.getEventCount(machineId)` and `getEvents(machineId, offset, limit)` (limit ≤ 100) return every event with its hash and metadata. `peaqos_arm_kit/chain.py` does this with plain web3 and the ABI shipped in the SDK, so a verifier needs no peaqOS account at all.
+`EventRegistry.getEventCount(machineId)` and `getEvents(machineId, offset, limit)` (limit up to 100) return every event with its hash and metadata. `peaqos_arm_kit/chain.py` does this with plain web3, so verifying needs no wallet.
 
-## Your identity, in one line
-
-Same `--machine-type` and `--credential-subject-hex` always derive the same machine ID. The kit's credential subject is `robo-innovate-2026/<team>/<signer address>`, so a team name cannot be claimed by someone else first. If you lose `.env` but keep the wallet, re-run `activate --dry-run` with the same values: the preview shows the same machine ID.
-
-## Versions
-
-`peaq-os-sdk 0.11.2`, `peaq-os-cli 0.0.19` (needs click ≥ 8.4). Python 3.10 or newer. Older SDK/CLI combinations will not have the 2.0 event path; `pip install -e .` pins them.
+Versions: `peaq-os-sdk` 0.11.2, `peaq-os-cli` 0.0.19, Python 3.10+, peaq mainnet (chain 3338), EventRegistry `0xA1e7F1d7B24dAb55Dc92491e6d9B89F6E925Ad1e`. Docs: [docs.peaq.xyz](https://docs.peaq.xyz).

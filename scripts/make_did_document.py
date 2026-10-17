@@ -4,7 +4,7 @@
     python scripts/make_did_document.py --controller 0xYourSignerAddress [--team blue]
 
 Writes:
-    arm-ed25519.key   hex private key, mode 0600: keep it on the robot PC
+    arm-ed25519.key   hex private key, mode 0600: keep it private
     did.json          the --did-document for activation
 
 The key is the arm's own identity key. The kit does not use it yet (events are

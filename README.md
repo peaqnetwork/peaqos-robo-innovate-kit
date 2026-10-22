@@ -14,7 +14,7 @@ The words you'll see in this repo:
 
 | Word | What it means here |
 |---|---|
-| **peaqID / machine ID** | Your robot's identity on peaq. `setup.sh` creates it once per team. |
+| **peaqID / machine ID** | Your robot's identity on peaq. A mentor creates it with you, once per team. |
 | **Segment** | One move: from when a joint starts moving until the arm is still again. |
 | **Event** | One segment on record: a fingerprint (hash) of the move's data plus a short summary (duration, sample count, how far each joint moved). |
 | **Motion log** | The `motion-log/` folder on your laptop: the full data of every segment. This is what you hand in. |
@@ -29,13 +29,13 @@ joint states ──▶ segmenter ──▶ segment file ──▶ hash ──▶
                                     armkit verify ──────┘  re-hash the file and compare
 ```
 
-On site, a real Doosan A0509 does the same for its demo moves, from its pendant. You don't program that arm. Its raw data stays on its controller, so its record can't be fully checked from outside. Your run can: you hold the raw log. That is the challenge.
+On site there is a real Doosan A0509 that runs peaqOS from its pendant. Every team gets a slot on it: you run its pre-configured moves, and each one goes on peaq under your own peaqID. For your own movements and the run you hand in, you record the emulator or your own ROS 2 robot, where you hold the raw log and can verify every move.
 
 ## What you need
 
 - Python 3.10 or newer (macOS's built-in `python3` is 3.9: use `brew install python@3.12`)
 - A robot that publishes ROS 2 joint states: the Doosan A0509 emulator (recommended, see [docs/ARM.md](docs/ARM.md); on a Mac use the Docker setup in [docker/README.md](docker/README.md)), or your own ROS 2 robot or simulator
-- From a peaq mentor at the event: the RPC URL (the address your laptop uses to talk to peaq) and 1.5 PEAQ in your wallet
+- From a peaq mentor at the event: your identity files (`.env` with the RPC URL and a funded wallet, `did.json`, `arm-ed25519.key`)
 
 ## 1. Try it in five minutes (no robot, nothing sent)
 
@@ -55,19 +55,15 @@ armkit status --arm                  # the real A0509's events, read from peaq
 unset KIT_ENV_FILE KIT_MACHINE_ID KIT_LOG_DIR
 ```
 
-## 2. Create your robot's identity (once per team)
+## 2. Get your robot's identity (once per team)
+
+A peaq mentor creates your peaqID with you, funds its wallet and uses it for your slot on the real arm. Afterwards you get three files: `.env` (your settings and wallet key), `did.json` and `arm-ed25519.key`. Copy them into this folder (all three are git-ignored, keep them private) and run:
 
 ```bash
-TEAM=<your-team-name> PEAQOS_RPC_URL=<url from the mentor> ./scripts/setup.sh
+armkit check
 ```
 
-`TEAM` is 1-32 characters of a-z, 0-9 and `-`. The script:
-
-1. writes `.env` with your settings and a new wallet key (keep `.env` private, it's git-ignored)
-2. prints your wallet address and waits: paste it into the team sheet, a mentor sends 1.5 PEAQ, then press Enter
-3. creates your peaqID on peaq and saves its machine ID to `.env`
-
-Then run `armkit check`: it shows your machine ID, your wallet, its balance and whether peaq is reachable. If anything fails, fix it and run `setup.sh` again: it picks up where it stopped and never replaces a funded wallet.
+It shows your machine ID, your wallet, its balance and whether peaq is reachable. Don't run `setup.sh` yourself: it would create a second identity next to the one your arm moves are on.
 
 ## 3. Start your robot
 
@@ -144,7 +140,7 @@ The kit is the starting point. Ideas that fit the week:
 | Path | What |
 |---|---|
 | `peaqos_arm_kit/` | The kit: joint-state sources (`ros2`, `csv`, `synthetic`), segmenter, event format, motion log, submitter, verifier, `armkit` CLI |
-| `scripts/setup.sh` | Creates your wallet and peaqID |
+| `scripts/setup.sh` | Creates a team wallet and peaqID (mentors run it with you) |
 | `scripts/fund_teams.py` | Mentor tool for funding team wallets |
 | `docker/` | Container for ROS 2 Humble and the Doosan emulator, including Apple Silicon Macs |
 | `docs/ARM.md` | Running the Doosan emulator or your own ROS 2 robot |

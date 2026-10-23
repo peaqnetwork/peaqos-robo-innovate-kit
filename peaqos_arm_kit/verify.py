@@ -208,6 +208,8 @@ def verify(
             doc_ok, doc_note = False, f"ledger says segment {entry.segment_index}, document says {doc.get('segment_index')}"
         source = str(doc.get("source", "?")) if doc else "?"
         candidates = [c for c in by_hash.get(entry.data_hash.lower(), []) if c.index not in matched]
+        # A team's own extension event can reference a segment's hash: match the kit motion event first
+        candidates.sort(key=lambda c: parse_metadata(c.metadata) is None)
         if candidates:
             ev = candidates[0]
             matched.add(ev.index)

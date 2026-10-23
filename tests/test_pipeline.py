@@ -254,6 +254,15 @@ def test_verifier_lists_non_motion_events_without_failing(tmp_path):
     assert report.unmatched_chain_events == [] and report.other_chain_events == [1] and report.all_ok
 
 
+def test_verifier_matches_motion_event_when_extension_event_shares_its_hash(tmp_path):
+    # an extension event that references a segment's hash, anchored before the motion event
+    [p] = _payloads(1)
+    ledger = _anchored_ledger(tmp_path, [p])
+    extension = _chain_event(0, p, metadata=b'{"alg":"ES256K"}')
+    report = verify(ledger, FakeReader([extension, _chain_event(1, p)]), MACHINE_ID)
+    assert report.all_ok and report.verdicts[0].event_index == 1 and report.other_chain_events == [0]
+
+
 def test_verifier_fails_malformed_document_instead_of_crashing(tmp_path):
     [p] = _payloads(1)
     doc = json.loads(p.raw_data)

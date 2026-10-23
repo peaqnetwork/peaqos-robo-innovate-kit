@@ -2,7 +2,7 @@
 
 Starter kit for the peaq × Doosan track at Robo.innovate 2026 (Munich, Oct 23-28).
 
-Give a robot its own identity on peaq, put every move it makes on record, and prove the record is real. You need Python and ROS 2. You don't need any blockchain experience: the kit and the peaq mentors handle that part.
+Give a robot its own identity on peaq, put every move it makes on record, and prove the record is real. You need Python, and either ROS 2 on Ubuntu or Docker (Mac, Windows) for the robot emulator. You don't need any blockchain experience: the kit and the peaq mentors handle that part.
 
 ## The idea in one minute
 
@@ -14,11 +14,13 @@ The words you'll see in this repo:
 
 | Word | What it means here |
 |---|---|
-| **peaqID / machine ID** | Your robot's identity on peaq. A mentor creates it with you, once per team. |
+| **peaqID / machine ID** | Your robot's identity on peaq. You create it once per team with `scripts/setup.sh` (step 2); a mentor funds it. |
 | **Segment** | One move: from when a joint starts moving until the arm is still again. |
 | **Event** | One segment on record: a fingerprint (hash) of the move's data plus a short summary (duration, sample count, how far each joint moved). |
 | **Motion log** | The `motion-log/` folder on your laptop: the full data of every segment. This is what you hand in. |
 | **Wallet / PEAQ** | The key that is allowed to write your robot's record, and the token that pays for it. Each event costs about 0.04 PEAQ (well under one cent). Mentors fund your wallet. |
+| **RPC URL** | The address your laptop uses to talk to peaq. Use the one on the printed card. |
+| **Transaction** | One write to peaq, signed by your wallet. Each event is one transaction and takes a few seconds to confirm. |
 | **Verify** | `armkit verify` re-hashes every segment in your log, finds it on peaq, and checks nothing was edited or left out. It needs no key, so a judge can run it. |
 
 ```
@@ -29,50 +31,65 @@ joint states ──▶ segmenter ──▶ segment file ──▶ hash ──▶
                                     armkit verify ──────┘  re-hash the file and compare
 ```
 
-On site there is a real Doosan A0509 that runs peaqOS from its pendant. Every team gets a slot on it: you run its pre-configured moves, and each one goes on peaq under your own peaqID. For your own movements and the run you hand in, you record the emulator or your own ROS 2 robot, where you hold the raw log and can verify every move.
+You build and record with the Doosan emulator or your own ROS 2 robot, where you hold the raw log and can verify every move. On site there is also a real Doosan A0509 that runs peaqOS. When it is ready, every team gets a slot: you run its pre-configured moves, and they go on peaq under a separate arm identity a mentor creates for your team, so they never mix with your own log. Ask the mentor for that identity's machine ID; `armkit status --machine-id <arm ID>` shows those moves.
 
 ## What you need
 
 - Python 3.10 or newer (macOS's built-in `python3` is 3.9: use `brew install python@3.12`)
 - A robot that publishes ROS 2 joint states: the Doosan A0509 emulator (recommended, see [docs/ARM.md](docs/ARM.md); on a Mac use the Docker setup in [docker/README.md](docker/README.md)), or your own ROS 2 robot or simulator
-- From a peaq mentor at the event: your identity files (`.env` with the RPC URL and a funded wallet, `did.json`, `arm-ed25519.key`)
+- From the peaq mentors at the event: the RPC URL (printed card on your table) and PEAQ for your wallet (step 2)
 
 ## 1. Try it in five minutes (no robot, nothing sent)
+
+On a Mac, `brew install python@3.12` first. On Ubuntu 22.04, use `python3` where it says `python3.12`.
 
 ```bash
 git clone https://github.com/peaqnetwork/peaqos-robo-innovate-kit.git
 cd peaqos-robo-innovate-kit
-python3.12 -m venv .venv && source .venv/bin/activate    # or: uv venv --seed -p 3.12 .venv && source .venv/bin/activate
+python3.12 -m venv .venv && source .venv/bin/activate
 pip install -U pip && pip install -e ".[dev]"
-pytest                                                    # 39 tests
+pytest
+```
 
-# a fake six-axis arm, its own log folder, nothing is sent anywhere
+`pytest` runs 40 tests. Then a fake six-axis arm, in its own log folder, with nothing sent anywhere:
+
+```bash
 export KIT_ENV_FILE=.env.example KIT_MACHINE_ID=1 KIT_LOG_DIR=./demo-log
 armkit record --source synthetic --fast
-cat demo-log/ledger.jsonl            # the index: a line per move, plus one per status update
-armkit verify --include-pending      # shows what the verifier checks (fails here: nothing is on peaq yet)
-armkit status --arm                  # the real A0509's own identity, read from peaq
+cat demo-log/ledger.jsonl
+armkit verify --include-pending
 unset KIT_ENV_FILE KIT_MACHINE_ID KIT_LOG_DIR
 ```
 
+`ledger.jsonl` is the index of your log: a line per move, plus one per status update. `armkit verify` shows what the verifier checks; it fails here because nothing is on peaq yet. The `unset` line matters: without it, `armkit` keeps using the demo settings in this terminal.
+
 ## 2. Get your robot's identity (once per team)
 
-A peaq mentor creates your peaqID with you, funds its wallet and uses it for your slot on the real arm. Afterwards you get three files: `.env` (your settings and wallet key), `did.json` and `arm-ed25519.key`. Copy them into this folder (all three are git-ignored, keep them private). Finder hides `.env`, so copy from the terminal:
+One person runs this, once, on the laptop that will record your hand-in run, in this folder with the venv active. Your team name is 1-28 characters of a-z, 0-9 and `-`; it becomes part of your robot's identity for good. The RPC URL is on the printed card.
 
 ```bash
-cp ~/Downloads/.env ~/Downloads/did.json ~/Downloads/arm-ed25519.key .
+TEAM=<your-team> PEAQOS_RPC_URL=<RPC URL from the card> scripts/setup.sh
+```
+
+It writes `.env` (your settings and wallet key), `did.json` and `arm-ed25519.key` (the robot's own key), then prints `your team wallet: 0x...` and waits. Put that address in the team sheet (QR code on your table) and tell a peaq mentor. While you wait, start step 3 in another terminal. When the mentor says it's funded, press Enter: the script creates your peaqID and prints `done`. Then:
+
+```bash
 armkit check
 ```
 
-It shows your machine ID, your wallet, its balance and whether peaq is reachable. The event count already includes your arm-slot moves. Don't run `setup.sh` yourself: it would create a second identity next to the one your arm moves are on.
+It works when `machine id` is a long number, `chain id` is 3338, `balance` is about 0.85 PEAQ and `events on chain` is 0. `chain: unreachable` instead: see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
+
+Run `setup.sh` once per team, in this folder. Running it again here is safe (it keeps your key); running it in another folder creates a second identity. The three files are git-ignored: keep them private, and never delete `.env`, it holds your wallet key and there is no reset.
 
 ## 3. Start your robot
 
 Run the Doosan emulator ([docs/ARM.md](docs/ARM.md), or [docker/README.md](docker/README.md) on a Mac) so it publishes `/dsr01/joint_states`. Any other ROS 2 `JointState` topic works too (set `KIT_ROS2_TOPIC`).
 
-On shared Wi-Fi, run `export ROS_LOCALHOST_ONLY=1` in every terminal so you don't record another team's robot.
+If the emulator runs on your own laptop, run `export ROS_LOCALHOST_ONLY=1` in every terminal so you don't record another team's robot on the shared Wi-Fi. A robot on another computer can't be seen with that setting: give your robot and your laptop the same `ROS_DOMAIN_ID` (a number from 1 to 101 that no other team uses) instead.
 
 ## 4. Record
+
+Recording needs ROS 2's Python packages. On a Mac or Windows, run the record commands inside Docker as shown in [docker/README.md](docker/README.md). On Ubuntu, use the `.venv-ros` venv from [docs/ARM.md](docs/ARM.md#recording-from-ros-2-on-ubuntu). `setup.sh`, `armkit check` and `armkit verify` work from your normal `.venv`.
 
 Test run, nothing sent to peaq (free, unlimited):
 
@@ -88,11 +105,13 @@ KIT_JOINT_SOURCE=ros2 armkit record --live
 
 Each move becomes one event under your peaqID, and its full data goes into `motion-log/`. Ctrl-C closes the move in progress and waits for the last events to land. If a move shows `receipt lost`, run `armkit resubmit`: it checks peaq first, skips moves that already landed, and stops if a transaction is still in flight (run it again a minute later), so no move is recorded twice.
 
-Three rules, because every move the kit puts on record under your peaqID has to be in the log you hand in (your arm-slot moves are the exception, see step 5):
+Three rules, because every move the kit puts on record under your peaqID has to be in the log you hand in:
 
 - Test runs go in their own folder (`KIT_LOG_DIR=./dev-log`). Only the run you want judged uses `--live`.
 - Never delete `motion-log/`.
 - Never record `--live` from two folders or two laptops with the same identity.
+
+You can stop and start `armkit record --live` as often as you like: every session adds to the same `motion-log/`.
 
 ## 5. Verify and hand in
 
@@ -100,7 +119,7 @@ Three rules, because every move the kit puts on record under your peaqID has to 
 armkit verify
 ```
 
-`RESULT: all segments verified` means your log matches peaq exactly. Your arm-slot moves are listed as `[info]`: they aren't in your log and don't fail the run. Hand the judges your machine ID, your wallet address, `motion-log/` as a zip, and your repo. They run the same command with the official kit.
+`RESULT: all segments verified` means your log matches peaq exactly. Events you add yourself in another format (an extension) are listed as `[info]` and don't fail the run. Hand the judges your machine ID, your wallet address, `motion-log/` as a zip, and your repo. They run the same command with the official kit.
 
 ## How you're judged
 
@@ -134,14 +153,14 @@ The kit is the starting point. Ideas that fit the week:
 | `armkit record` | Writes moves to the local log only; add `--live` to put each one on peaq |
 | `armkit resubmit` | Retries moves that failed or lost their receipt, without recording any move twice |
 | `armkit verify` | Checks your motion log against peaq |
-| `armkit status` | Shows your latest events on peaq, arm-slot moves included (`--arm` for the real A0509's own identity) |
+| `armkit status` | Shows your latest events on peaq (`--machine-id` for another identity, such as your arm-slot one; `--arm` for the real A0509's own identity) |
 
 ## What's in the repo
 
 | Path | What |
 |---|---|
 | `peaqos_arm_kit/` | The kit: joint-state sources (`ros2`, `csv`, `synthetic`), segmenter, event format, motion log, submitter, verifier, `armkit` CLI |
-| `scripts/setup.sh` | Creates a team wallet and peaqID (mentors run it with you) |
+| `scripts/setup.sh` | Creates your team wallet and peaqID (step 2) |
 | `scripts/fund_teams.py` | Mentor tool for funding team wallets |
 | `docker/` | Container for ROS 2 Humble and the Doosan emulator, including Apple Silicon Macs |
 | `docs/ARM.md` | Running the Doosan emulator or your own ROS 2 robot |

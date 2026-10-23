@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Mentors only: one-time setup for a team. Writes .env, creates a wallet, activates
-# the robot's peaqID. Teams get the resulting files and never run this themselves.
+# One-time setup for a team, run in the kit folder. Writes .env, creates a wallet,
+# waits until a mentor has funded it, then activates the robot's peaqID.
 #
-#   mkdir -p ~/teams/<team> && cd ~/teams/<team>
-#   TEAM=<team> PEAQOS_RPC_URL=https://<hackathon-endpoint> <kit>/scripts/setup.sh
+#   TEAM=<team> PEAQOS_RPC_URL=<RPC URL from the mentors' card> scripts/setup.sh
 #
+# Mentors use the same script for a team's separate arm-slot identity
+# (TEAM=<team>-arm, in its own folder).
 # Safe to re-run in the SAME folder: an existing .env with a key is kept (so a funded
 # wallet is never lost), and an existing KIT_MACHINE_ID skips activation. Run in
 # another folder, it creates a second identity.
@@ -20,7 +21,7 @@ if [[ ! "$TEAM" =~ ^[a-z0-9-]{1,32}$ ]]; then
   exit 2
 fi
 MACHINE_TYPE="${MACHINE_TYPE:-robo-innovate-2026-a0509}"
-: "${PEAQOS_RPC_URL:?set PEAQOS_RPC_URL to the hackathon endpoint mentors handed out}"
+: "${PEAQOS_RPC_URL:?set PEAQOS_RPC_URL to the RPC URL on the printed card}"
 
 mask_url() { python3 - "$1" <<'EOF'
 import sys; from urllib.parse import urlsplit
@@ -97,7 +98,7 @@ save(p, t)
 if filled:
     print("   peaqos init left these empty (address download failed); filled pinned mainnet values: " + ", ".join(filled))
 EOF
-echo "   if peaqos init printed a 'whoami verification failed' warning above, ignore it: armkit check at the end is the check that counts"
+echo "   a 'whoami verification failed' warning above (if any) is harmless; run armkit check after setup finishes"
 
 unset PEAQOS_PRIVATE_KEY  # from here on the key comes from .env only, so every step uses the same wallet
 SIGNER="$(python3 -c 'import os; from dotenv import load_dotenv; load_dotenv(".env"); from eth_account import Account; print(Account.from_key(os.environ["PEAQOS_PRIVATE_KEY"]).address)')"
@@ -115,7 +116,8 @@ if [[ -n "$(env_get KIT_MACHINE_ID)" ]]; then
 fi
 
 echo "== 3/5 your team wallet: $SIGNER"
-echo "   Fund it with 1.5 PEAQ (<kit>/scripts/fund_teams.py, another terminal), then press Enter."
+echo "   Put this address in the team sheet and ask a peaq mentor to fund it."
+echo "   Press Enter once they say it's funded (1.5 PEAQ)."
 read -r || { echo "no input at the funding prompt; re-run this script once the wallet is funded (your key is kept)" >&2; exit 1; }
 
 # The credential subject fixes the machine ID forever. It includes the team wallet
@@ -171,5 +173,5 @@ EOF
 grep -q "^KIT_MACHINE_ID=$MACHINE_ID$" .env || { echo "could not write KIT_MACHINE_ID to .env; add it by hand: KIT_MACHINE_ID=$MACHINE_ID" >&2; exit 1; }
 
 echo
-echo "done. next: armkit check, the arm slot, then hand the team .env, did.json and arm-ed25519.key."
-echo "      Don't run this script again for the same team in another folder: it would create a second identity."
+echo "done. next: armkit check. Keep .env, did.json and arm-ed25519.key private and never delete .env."
+echo "      Don't run this script again in another folder: it would create a second identity."

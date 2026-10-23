@@ -252,6 +252,6 @@ def format_report(report: VerifyReport) -> str:
     if report.unmatched_chain_events:
         lines.append(f"  [FAIL] on-chain motion events for this machine with no segment in this log: {report.unmatched_chain_events}")
     if report.other_chain_events:
-        lines.append(f"  [info] events that are not kit motion events (for example your arm-slot moves), not checked against this log: {report.other_chain_events}")
+        lines.append(f"  [info] events that are not kit motion events (for example extension events you added), not checked against this log: {report.other_chain_events}")
     lines.append("RESULT: " + ("all segments verified" if report.all_ok else "verification FAILED"))
     return "\n".join(lines)

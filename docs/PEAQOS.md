@@ -4,14 +4,14 @@ You only need this page if you want to go below the kit. Three things from peaqO
 
 ## What `scripts/setup.sh` does
 
-A mentor already ran this for your team. Don't run it yourself: it would create a second identity.
+README step 2 runs it for you, once per team. These are the steps inside it, for when you want to go lower. Read them, don't run them: in a folder that already has your `.env`, step 2 overwrites it and your wallet key is gone.
 
 ```bash
 # 1. a new wallet key for the team
 export PEAQOS_PRIVATE_KEY=$(python3 -c 'from eth_account import Account; print("0x" + Account.create().key.hex().removeprefix("0x"))')
 
 # 2. .env for peaq mainnet, with the hackathon RPC URL
-PEAQOS_NETWORK=mainnet PEAQOS_RPC_URL=<url from the mentor> peaqos init --non-interactive --force
+PEAQOS_NETWORK=mainnet PEAQOS_RPC_URL=<RPC URL from the card> peaqos init --non-interactive --force
 chmod 600 .env
 
 # 3. the robot's own Ed25519 key and DID document, controlled by your wallet

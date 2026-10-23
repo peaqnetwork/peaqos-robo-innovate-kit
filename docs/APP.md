@@ -31,7 +31,7 @@ It needs the log folder, the machine ID and an RPC URL, and no private key. It c
 3. An event with exactly that hash exists under your machine ID (catches a segment that was never put on record). Segments recorded without `--live` fail the run.
 4. The on-chain summary matches the file (catches a hash reused with a different description).
 
-Finally it lists every motion event on peaq under your machine ID that has no segment in the log, and fails the run on it. So every move the kit puts on record must be in the log you hand in. Events with other metadata, such as your arm-slot moves, are listed as information only.
+Finally it lists every motion event on peaq under your machine ID that has no segment in the log, and fails the run on it. So every move the kit puts on record must be in the log you hand in. Events with other metadata, such as extension events you add yourself, are listed as information only.
 
 `armkit verify --json` gives the same report as JSON.
 

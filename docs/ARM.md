@@ -25,7 +25,14 @@ ros2 topic hz /dsr01/joint_states
 
 If RViz crashes with "Couldn't open X display", ignore it: the driver keeps running.
 
-Move the emulated arm any way you like (RViz/MoveIt, `dsr_msgs` service calls, a DRL script). Every move above the velocity threshold becomes a segment.
+Move the emulated arm any way you like (RViz/MoveIt, `dsr_msgs2` service calls, a DRL script). Every move above the velocity threshold becomes a segment. The quickest first move, in another terminal with ROS sourced (angles in degrees):
+
+```bash
+ros2 service call /dsr01/motion/move_joint dsr_msgs2/srv/MoveJoint "{pos: [30.0, 0.0, 90.0, 0.0, 90.0, 0.0], vel: 30.0, acc: 30.0}"
+ros2 service call /dsr01/motion/move_joint dsr_msgs2/srv/MoveJoint "{pos: [0.0, 0.0, 90.0, 0.0, 90.0, 0.0], vel: 30.0, acc: 30.0}"
+```
+
+If it answers `success=False`, put the controller in autonomous mode once: `ros2 service call /dsr01/system/set_robot_mode dsr_msgs2/srv/SetRobotMode "{robot_mode: 1}"`.
 
 ## Option B: your own robot or simulator
 

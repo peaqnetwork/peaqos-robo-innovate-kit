@@ -53,7 +53,7 @@ def _reader(s: KitSettings, rpc_url: str | None = None, registry: str | None = N
     missing = [n for n, v in (("PEAQOS_RPC_URL", rpc), ("EVENT_REGISTRY_ADDRESS", reg)) if not v]
     if missing:
         raise click.ClickException(
-            f"{' and '.join(missing)} not set in .env: copy in the .env you got from the mentors "
+            f"{' and '.join(missing)} not set in .env: run armkit from the folder where you ran scripts/setup.sh "
             "(for the README quick start only: use .env.example)"
         )
     return EventRegistryReader(rpc, reg)
@@ -80,7 +80,7 @@ def check() -> None:
     rows = [
         ("joint source", s.joint_source),
         ("log dir", str(s.log_dir)),
-        ("machine id", str(s.machine_id) if s.machine_id else "MISSING (copy in the .env you got from the mentors)"),
+        ("machine id", str(s.machine_id) if s.machine_id else "MISSING (run scripts/setup.sh, README step 2)"),
         ("arm machine id", str(s.arm_machine_id) if s.arm_machine_id else "not set"),
         ("rpc", _mask(s.rpc_url)),
         ("event registry", s.event_registry or "MISSING"),
@@ -126,7 +126,7 @@ def record(live: bool, source: str | None, max_segments: int | None, fast: bool)
 
     s = _settings()
     if live and not s.has_signer:
-        raise click.ClickException("--live needs PEAQOS_PRIVATE_KEY in .env (copy in the .env you got from the mentors)")
+        raise click.ClickException("--live needs PEAQOS_PRIVATE_KEY in .env (run scripts/setup.sh, README step 2)")
     from .recorder import LIVE_SOURCES
 
     kind = source or s.joint_source
@@ -184,7 +184,7 @@ def verify(machine_id, log_dir, rpc_url, registry, include_pending, as_json) -> 
 
 @main.command()
 @click.option("--machine-id", type=int, default=None, help="Defaults to KIT_MACHINE_ID (your own identity).")
-@click.option("--arm", is_flag=True, help="Read the real A0509's own identity instead (KIT_ARM_MACHINE_ID). Your arm-slot moves are under your own machine ID.")
+@click.option("--arm", is_flag=True, help="Read the real A0509's own identity instead (KIT_ARM_MACHINE_ID).")
 @click.option("--last", type=int, default=5, help="How many recent events to print.")
 def status(machine_id, arm, last) -> None:
     """Event count and recent events for a machine, read from the chain."""

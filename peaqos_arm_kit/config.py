@@ -61,7 +61,7 @@ class KitSettings:
             if raw and not raw.isdigit():
                 raise SystemExit(
                     f"{name}={raw!r} in .env is not a machine ID. It must be the decimal number "
-                    "printed as \"machine_id\" by `peaqos activate --json` (about 77 digits)."
+                    "from the .env you got from the mentors (about 77 digits), unchanged."
                 )
         return cls(
             machine_id=int(raw_id) if raw_id else None,
@@ -83,7 +83,7 @@ class KitSettings:
     def require_machine_id(self) -> int:
         if self.machine_id is None:
             raise SystemExit(
-                "KIT_MACHINE_ID is not set. Run scripts/setup.sh (or `peaqos activate --json`) "
-                "and copy the machine_id into .env."
+                "KIT_MACHINE_ID is not set. Copy the .env you got from the mentors into this folder "
+                "and run armkit from there."
             )
         return self.machine_id

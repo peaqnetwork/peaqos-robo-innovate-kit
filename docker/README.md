@@ -19,6 +19,10 @@ docker run --rm -it --network host \
 docker run --rm -it --network host \
   -v "$PWD":/kit -w /kit peaqos-arm-kit \
   bash -c 'ros2 topic hz /dsr01/joint_states'
+# test run first: nothing sent, its own folder
+docker run --rm -it --network host -e KIT_LOG_DIR=./dev-log -v "$PWD":/kit -w /kit peaqos-arm-kit \
+  armkit record --source ros2
+# the run you hand in
 docker run --rm -it --network host -v "$PWD":/kit -w /kit peaqos-arm-kit \
   armkit record --source ros2 --live
 ```

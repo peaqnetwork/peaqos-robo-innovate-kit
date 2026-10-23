@@ -31,13 +31,13 @@ It needs the log folder, the machine ID and an RPC URL, and no private key. It c
 3. An event with exactly that hash exists under your machine ID (catches a segment that was never put on record). Segments recorded without `--live` fail the run.
 4. The on-chain summary matches the file (catches a hash reused with a different description).
 
-Finally it lists every motion event on peaq under your machine ID that has no segment in the log, and fails the run on it. So every move you put on record must be in the log you hand in. Events with other metadata are listed as information only.
+Finally it lists every motion event on peaq under your machine ID that has no segment in the log, and fails the run on it. So every move the kit puts on record must be in the log you hand in. Events with other metadata, such as your arm-slot moves, are listed as information only.
 
 `armkit verify --json` gives the same report as JSON.
 
 ## What it proves, and what it doesn't
 
-A passing verify proves the log you hand in is exactly the log your robot's identity put on record, at the times peaq shows. It does not prove the motion came from a robot rather than a script. Making that provable is a good thing to build: sign each segment with the robot's own key (the Ed25519 key `setup.sh` creates, listed in its DID document) and teach the verifier to check the signature. The kit only submits `trust_level` 0; if you build signing, change `_trust_level` in `peaqos_arm_kit/config.py` and explain it in your runbook.
+A passing verify proves the log you hand in is exactly the log your robot's identity put on record, at the times peaq shows. It does not prove the motion came from a robot rather than a script. Making that provable is a good thing to build: sign each segment with the robot's own key (the Ed25519 key in `arm-ed25519.key`, listed in your `did.json`) and teach the verifier to check the signature. The kit only submits `trust_level` 0; if you build signing, change `_trust_level` in `peaqos_arm_kit/config.py` and explain it in your runbook.
 
 ## Things to know this week
 

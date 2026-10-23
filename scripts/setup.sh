@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# One-time setup for a team: write .env, create a wallet, activate the robot's peaqID.
+# Mentors only: one-time setup for a team. Writes .env, creates a wallet, activates
+# the robot's peaqID. Teams get the resulting files and never run this themselves.
 #
-#   PEAQOS_RPC_URL=https://<hackathon-endpoint> TEAM=blue bash scripts/setup.sh
+#   mkdir -p ~/teams/<team> && cd ~/teams/<team>
+#   TEAM=<team> PEAQOS_RPC_URL=https://<hackathon-endpoint> <kit>/scripts/setup.sh
 #
-# Safe to re-run: an existing .env with a key is kept (so a funded wallet is never
-# lost), and an existing KIT_MACHINE_ID skips activation.
-# Needs: the kit installed (pip install -e .), and a mentor to fund the wallet it
-# prints before the activate step. Fund 1.5 PEAQ: bond ~0.5 (USD-priced, moves) +
+# Safe to re-run in the SAME folder: an existing .env with a key is kept (so a funded
+# wallet is never lost), and an existing KIT_MACHINE_ID skips activation. Run in
+# another folder, it creates a second identity.
+# Needs: the kit installed (pip install -e .), and the wallet it prints funded
+# (scripts/fund_teams.py) before the activate step. Fund 1.5 PEAQ: bond ~0.5 (USD-priced, moves) +
 # 0.05 headroom the CLI insists on + ~0.09 activation gas + ~0.04 per event.
 set -euo pipefail
 KIT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -56,7 +59,7 @@ else
 # ---- peaqos-arm-kit ----
 KIT_MACHINE_ID=
 KIT_ARM_MACHINE_ID=15083021071335353053994705927780059101231441765380432097794409355707727094755
-KIT_JOINT_SOURCE=synthetic
+KIT_JOINT_SOURCE=ros2
 KIT_ROS2_TOPIC=/dsr01/joint_states
 KIT_LOG_DIR=./motion-log
 KIT_TRUST_LEVEL=0
@@ -102,7 +105,7 @@ SIGNER="$(python3 -c 'import os; from dotenv import load_dotenv; load_dotenv(".e
 # ---------------------------------------------------------------- 2/5 DID document
 echo "== 2/5 the robot's DID document (its own Ed25519 key)"
 python3 "$KIT_DIR/scripts/make_did_document.py" --controller "$SIGNER" --team "$TEAM" >/dev/null
-echo "   arm-ed25519.key + did.json written (reused if they already existed)"
+echo "   arm-ed25519.key (reused if it existed) + did.json written"
 
 # ---------------------------------------------------------------- 3/5 funding
 if [[ -n "$(env_get KIT_MACHINE_ID)" ]]; then
@@ -112,7 +115,7 @@ if [[ -n "$(env_get KIT_MACHINE_ID)" ]]; then
 fi
 
 echo "== 3/5 your team wallet: $SIGNER"
-echo "   Ask a mentor to fund it with 1.5 PEAQ (mentors: scripts/fund_teams.py), then press Enter."
+echo "   Fund it with 1.5 PEAQ (<kit>/scripts/fund_teams.py, another terminal), then press Enter."
 read -r || { echo "no input at the funding prompt; re-run this script once the wallet is funded (your key is kept)" >&2; exit 1; }
 
 # The credential subject fixes the machine ID forever. It includes the team wallet
@@ -168,5 +171,5 @@ EOF
 grep -q "^KIT_MACHINE_ID=$MACHINE_ID$" .env || { echo "could not write KIT_MACHINE_ID to .env; add it by hand: KIT_MACHINE_ID=$MACHINE_ID" >&2; exit 1; }
 
 echo
-echo "done. next: armkit check, then try it without spending PEAQ: KIT_LOG_DIR=./dev-log armkit record --source synthetic --fast"
-echo "      (motion-log/ is for the run you hand in; keep test runs out of it)"
+echo "done. next: armkit check, the arm slot, then hand the team .env, did.json and arm-ed25519.key."
+echo "      Don't run this script again for the same team in another folder: it would create a second identity."

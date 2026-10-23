@@ -51,19 +51,20 @@ export KIT_ENV_FILE=.env.example KIT_MACHINE_ID=1 KIT_LOG_DIR=./demo-log
 armkit record --source synthetic --fast
 cat demo-log/ledger.jsonl            # the index: a line per move, plus one per status update
 armkit verify --include-pending      # shows what the verifier checks (fails here: nothing is on peaq yet)
-armkit status --arm                  # the real A0509's events, read from peaq
+armkit status --arm                  # the real A0509's own identity, read from peaq
 unset KIT_ENV_FILE KIT_MACHINE_ID KIT_LOG_DIR
 ```
 
 ## 2. Get your robot's identity (once per team)
 
-A peaq mentor creates your peaqID with you, funds its wallet and uses it for your slot on the real arm. Afterwards you get three files: `.env` (your settings and wallet key), `did.json` and `arm-ed25519.key`. Copy them into this folder (all three are git-ignored, keep them private) and run:
+A peaq mentor creates your peaqID with you, funds its wallet and uses it for your slot on the real arm. Afterwards you get three files: `.env` (your settings and wallet key), `did.json` and `arm-ed25519.key`. Copy them into this folder (all three are git-ignored, keep them private). Finder hides `.env`, so copy from the terminal:
 
 ```bash
+cp ~/Downloads/.env ~/Downloads/did.json ~/Downloads/arm-ed25519.key .
 armkit check
 ```
 
-It shows your machine ID, your wallet, its balance and whether peaq is reachable. Don't run `setup.sh` yourself: it would create a second identity next to the one your arm moves are on.
+It shows your machine ID, your wallet, its balance and whether peaq is reachable. The event count already includes your arm-slot moves. Don't run `setup.sh` yourself: it would create a second identity next to the one your arm moves are on.
 
 ## 3. Start your robot
 
@@ -87,7 +88,7 @@ KIT_JOINT_SOURCE=ros2 armkit record --live
 
 Each move becomes one event under your peaqID, and its full data goes into `motion-log/`. Ctrl-C closes the move in progress and waits for the last events to land. If a move shows `receipt lost`, run `armkit resubmit`: it checks peaq first, skips moves that already landed, and stops if a transaction is still in flight (run it again a minute later), so no move is recorded twice.
 
-Three rules, because every move you put on record under your peaqID has to be in the log you hand in:
+Three rules, because every move the kit puts on record under your peaqID has to be in the log you hand in (your arm-slot moves are the exception, see step 5):
 
 - Test runs go in their own folder (`KIT_LOG_DIR=./dev-log`). Only the run you want judged uses `--live`.
 - Never delete `motion-log/`.
@@ -99,7 +100,7 @@ Three rules, because every move you put on record under your peaqID has to be in
 armkit verify
 ```
 
-`RESULT: all segments verified` means your log matches peaq exactly. Hand the judges your machine ID, your wallet address, `motion-log/` as a zip, and your repo. They run the same command with the official kit.
+`RESULT: all segments verified` means your log matches peaq exactly. Your arm-slot moves are listed as `[info]`: they aren't in your log and don't fail the run. Hand the judges your machine ID, your wallet address, `motion-log/` as a zip, and your repo. They run the same command with the official kit.
 
 ## How you're judged
 
@@ -111,7 +112,7 @@ armkit verify
 | Identity and setup | 10% | Your own peaqID, set up correctly, written only by your team's wallet. |
 | Reproducibility | 20% | A repo and runbook another team could follow to repeat your run and your build. |
 
-Hard fail: a log that fails verification (edited, incomplete, or not on peaq); events under an identity your team doesn't control; motion presented as coming from a robot or simulator it didn't come from. The synthetic arm and CSV replay are for building only: the run you hand in comes from the emulator, a ROS 2 simulator or a real robot, and every segment records which one.
+Hard fail: a log that fails verification (edited, incomplete, or not on peaq); events under an identity your team doesn't control; motion presented as coming from a robot or simulator it didn't come from. The synthetic arm and CSV replay are for building only: the run you hand in comes from the emulator, a ROS 2 simulator or a real robot, and every segment records its source (`ros2:<topic>`, `csv:<file>` or `synthetic`).
 
 A passing verify proves your log wasn't changed after it went on record. Where the motion came from is yours to show in your demo.
 
@@ -133,7 +134,7 @@ The kit is the starting point. Ideas that fit the week:
 | `armkit record` | Writes moves to the local log only; add `--live` to put each one on peaq |
 | `armkit resubmit` | Retries moves that failed or lost their receipt, without recording any move twice |
 | `armkit verify` | Checks your motion log against peaq |
-| `armkit status` | Shows your latest events on peaq (`--arm` for the real A0509) |
+| `armkit status` | Shows your latest events on peaq, arm-slot moves included (`--arm` for the real A0509's own identity) |
 
 ## What's in the repo
 

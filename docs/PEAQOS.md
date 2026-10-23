@@ -4,6 +4,8 @@ You only need this page if you want to go below the kit. Three things from peaqO
 
 ## What `scripts/setup.sh` does
 
+A mentor already ran this for your team. Don't run it yourself: it would create a second identity.
+
 ```bash
 # 1. a new wallet key for the team
 export PEAQOS_PRIVATE_KEY=$(python3 -c 'from eth_account import Account; print("0x" + Account.create().key.hex().removeprefix("0x"))')
